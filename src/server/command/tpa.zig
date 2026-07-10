@@ -6,7 +6,7 @@ pub const description = "Request to teleport to another player.";
 pub const usage = "\\/tpa <player>";
 
 const Args = union(enum) { @"/tpa <target>": struct { target: []const u8 } };
-const ArgParser = main.argparse.Parser(Args, .{.commandName = "/tpa"});
+const ArgParser = main.argparse.Parser(Args, .{ .commandName = "/tpa" });
 
 pub fn execute(args: []const u8, source: *User) void {
     var errorMessage: main.List(u8) = .empty;
@@ -32,12 +32,22 @@ pub fn execute(args: []const u8, source: *User) void {
     } else {
         const online_users = main.server.getUserListAndIncreaseRefCount(main.stackAllocator);
         defer main.server.freeUserListAndDecreaseRefCount(main.stackAllocator, online_users);
+        var partialMatches = 0;
         for (online_users) |u| {
+            //Exact Match
             if (std.mem.eql(u8, u.name, target_str)) {
                 u.increaseRefCount();
                 target_user = u;
                 break;
             }
+            //Partial Match
+            if (std.mem.indexOf(u8, u.name, target_str) != null) {
+                partialMatches += 1;
+                target_user = u;
+            }
+        }
+        if (partialMatches != 1) {
+            target_user = null;
         }
     }
 
